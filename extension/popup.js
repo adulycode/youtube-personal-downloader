@@ -28,7 +28,7 @@ $('start').onclick = async () => {
   } catch(e) {$('status').textContent = e.message;}
 };
 $('cancel').onclick = () => chrome.runtime.sendMessage({action:'cancel'});
-chrome.storage.local.get('updateStatus').then(s=>{$('updateStatus').textContent=s.updateStatus||'อัปเดตอัตโนมัติทุก 6 ชั่วโมง · เชื่อมผ่าน CONNECT-GITHUB.cmd ครั้งแรก';});
+chrome.storage.local.get('updateStatus').then(s=>{$('updateStatus').textContent=s.updateStatus||'อัปเดตอัตโนมัติทุก 6 ชั่วโมง · ไม่ต้องล็อกอิน GitHub';});
 chrome.storage.onChanged.addListener(c=>{if(c.updateStatus) $('updateStatus').textContent=c.updateStatus.newValue||'';});
 $('checkUpdate').onclick = async () => {
   $('checkUpdate').disabled=true;

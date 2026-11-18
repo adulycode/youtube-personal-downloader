@@ -1,5 +1,14 @@
 # YouTube Personal Downloader — Windows + Chrome
 
+## เวอร์ชัน 1.4 — ไม่ต้องล็อกอิน GitHub
+
+อัปเดตจาก public GitHub Releases โดยตรง ไม่ต้องมีบัญชี GitHub ไม่ต้องติดตั้ง GitHub CLI และไม่ต้องเปิด CONNECT-GITHUB.cmd
+ผู้ใช้เดิม: แตกชุด 1.4 รัน UPDATE.cmd แล้วกด Reload ส่วนขยายหนึ่งครั้ง เพื่อเปลี่ยนระบบอัปเดตเก่า
+เครื่องใหม่: รัน INSTALL.cmd แล้วโหลดโฟลเดอร์ extension ใน chrome://extensions ผ่าน Developer mode
+จากนั้นตรวจอัปเดตทุก 6 ชั่วโมงขณะเปิด Chrome หรือกดปุ่มตรวจอัปเดตใน popup
+ข้อความเกี่ยวกับ private repo และการลงชื่อเข้าใช้ในหัวข้อเวอร์ชันเก่าด้านล่างใช้กับเวอร์ชันเก่าเท่านั้น
+
+
 ## เวอร์ชัน 1.3 — อัปเดตอัตโนมัติผ่าน private GitHub
 
 สำหรับผู้ใช้เดิม: รัน UPDATE.cmd จากชุด 1.3 และกด Reload ส่วนขยายหนึ่งครั้ง เพื่อเพิ่มระบบอัปเดตนี้

@@ -1,13 +1,14 @@
-"""Private release updates authenticated through the user's GitHub CLI session."""
+"""Public release updates without GitHub accounts or tokens."""
 import base64
 import hashlib
 import json
 from pathlib import Path
 import re
 import shutil
-import subprocess
 import tempfile
 import zipfile
+from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 
 REPOSITORY = 'adulycode/youtube-personal-downloader'
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,22 +29,18 @@ def version(value):
         raise ValueError('Invalid release version')
     return parts + (0,) * (4 - len(parts))
 
-def gh_cli():
-    candidate = shutil.which('gh')
-    if not candidate:
-        import os
-        candidate = str(Path(os.environ.get('ProgramFiles',r'C:\Program Files'))/'GitHub CLI'/'gh.exe')
-        if not Path(candidate).is_file():
-            raise ValueError('เปิด CONNECT-GITHUB.cmd ครั้งแรกเพื่อเชื่อมระบบอัปเดต')
-    return candidate
-
-def gh(*args):
-    result = subprocess.run([gh_cli(),*args],stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                            timeout=180,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-    if result.returncode:
-        # Do not return arbitrary CLI diagnostics that might include authentication data.
-        raise ValueError('เข้าถึง private release ไม่ได้: เปิด CONNECT-GITHUB.cmd และตรวจสิทธิ์ repo')
-    return result.stdout
+def public_get(url, limit=10_000_000):
+    parsed = urlsplit(url)
+    if parsed.scheme != 'https' or parsed.hostname not in ('api.github.com','github.com'):
+        raise ValueError('Invalid update URL')
+    request = Request(url, headers={'User-Agent':'YouTube-Personal-Downloader','Accept':'application/vnd.github+json' if parsed.hostname == 'api.github.com' else 'application/octet-stream'})
+    with urlopen(request, timeout=60) as response:
+        if urlsplit(response.url).scheme != 'https':
+            raise ValueError('Invalid download redirect')
+        data = response.read(limit+1)
+    if len(data) > limit:
+        raise ValueError('Update response too large')
+    return data
 
 def validate_bundle(archive, checksum, current, tag):
     expected = checksum.read_text(encoding='utf-8').strip().splitlines()
@@ -71,7 +68,7 @@ def validate_bundle(archive, checksum, current, tag):
     return content
 
 def apply_bundle(content):
-    # Preserve the Python environment, downloaded media, host registration and CLI login.
+    # Preserve the Python environment, downloaded media, host registration.
     with tempfile.TemporaryDirectory(prefix='yt-update-backup-') as temporary:
         backups = {}
         changed = []
@@ -101,7 +98,7 @@ def apply_bundle(content):
 
 def check_update():
     current = json.loads((ROOT/'extension/manifest.json').read_text(encoding='utf-8-sig'))
-    release = json.loads(gh('api',f'repos/{REPOSITORY}/releases/latest'))
+    release = json.loads(public_get(f'https://api.github.com/repos/{REPOSITORY}/releases/latest',1_000_000))
     tag = release.get('tag_name','')
     if not tag.startswith('v'):
         raise ValueError('Invalid release tag')
@@ -111,8 +108,9 @@ def check_update():
         raise ValueError('Not a stable release')
     with tempfile.TemporaryDirectory(prefix='yt-update-') as temporary:
         stage = Path(temporary)
-        gh('release','download',tag,'--repo',REPOSITORY,'--pattern','YouTube-Downloader.zip',
-           '--pattern','SHA256SUMS.txt','--dir',str(stage))
+        for name in ('YouTube-Downloader.zip','SHA256SUMS.txt'):
+            url = f'https://github.com/{REPOSITORY}/releases/download/{tag}/{name}'
+            (stage/name).write_bytes(public_get(url,10_000_000 if name.endswith('.zip') else 4096))
         archive = stage/'YouTube-Downloader.zip'
         if archive.stat().st_size > 10_000_000:
             raise ValueError('Update package too large')

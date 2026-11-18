@@ -1,19 +1,13 @@
 # YouTube Personal Downloader
 
-Private source for the Windows Chrome extension. Read [Thai installation instructions](README-TH.md).
+Chrome extension and Windows helper. Read README-TH.md for installation.
 
-## Release pipeline
+Version 1.4 uses public GitHub Releases over HTTPS. Client machines need no GitHub account, CLI or token. Updates are checked every six hours while Chrome runs, or immediately from the popup. After applying an update the extension reloads itself. Refresh open YouTube pages for updated content scripts.
 
-Every push to `main` affecting source runs syntax checks and builds an allowlisted ZIP with SHA-256 checksums. A new `extension/manifest.json` version creates a new private GitHub Release. Existing releases are preserved. No personal token, virtual environment, tool binaries, or machine-specific registry manifest is packaged.
+Existing users: run UPDATE.cmd from the latest package then reload the extension once. New users: run INSTALL.cmd then load the extension folder in chrome://extensions with Developer mode. Keep the installation folder in place. CONNECT-GITHUB.cmd remains for compatibility and no longer authenticates or installs anything.
 
-The workflow uses the repository's ephemeral `GITHUB_TOKEN` with `contents: write`. No personal token secret is needed for publishing. GitHub Actions must be enabled for this repository.
+Source pushes to main run tests and package an explicit allowlist with SHA-256 checksums. Increase extension/manifest.json version to publish a new Release; existing releases are preserved. Build using python scripts/package.py.
 
-## Current update behavior
+The updater checks checksum, paths, version and extension identity, and rolls back failed writes. It preserves the Python environment and native registration. External dependency/schema migrations may require separate setup. SHA-256 is an integrity check, not an independent publisher signature. Only trusted maintainers should publish releases.
 
-`UPDATE.cmd` bootstraps this version from an extracted ZIP and restores the original registered path when needed. Reload the extension once after that bootstrap. Run `CONNECT-GITHUB.cmd` once per Windows account to authenticate GitHub CLI using an account with access to this private repository. Connecting this repository to Codex does not authenticate users' extension installations. Do not distribute the owner's token.
-
-After setup, the extension checks stable private Releases every six hours while Chrome is running. A popup button can check immediately. The helper downloads a pinned release tag through GitHub CLI, checks the archive SHA-256, exact package allowlist, version and extension identity, preserves the Python environment and native registration, and rolls back file writes on an error. The extension reloads itself after applying updates. Refresh open YouTube pages to use new content scripts. There is no Windows scheduled task or background service. This setup does not automatically migrate external dependencies or registry schemas.
-
-The updater runs code published by the repository owner. Only trusted maintainers should have write access. SHA-256 verifies package integrity; it is not an independent publisher signature. Tests use local fixtures; a live private-release client update still requires a GitHub-authenticated Windows installation.
-
-Build locally with `python scripts/package.py`. Outputs are in `dist/`.
+Credentials, local dependencies and machine-specific manifests are excluded. Content script layout and real YouTube downloading still need live verification.
