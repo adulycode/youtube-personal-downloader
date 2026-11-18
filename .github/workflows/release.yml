@@ -7,7 +7,7 @@ on:
       - 'native/**'
       - '*.cmd'
       - 'README-TH.md'
-      - 'scripts/package.py'
+      - 'scripts/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 permissions:
@@ -47,4 +47,25 @@ jobs:
           fi
           gh release create "$RELEASE_TAG" dist/YouTube-Downloader.zip dist/SHA256SUMS.txt dist/version.json \
             --target "$COMMIT_SHA" --title "YouTube Personal Downloader $RELEASE_TAG" \
-            --notes "Private Windows package. Extract and run UPDATE.cmd, then reload the Chrome extension and refresh YouTube."
+            --notes "Windows x64: new users open YouTube-Downloader-Setup.exe (offline, no system Python required). Existing users can update automatically or use the small ZIP. Chrome requires Load unpacked once on new machines."
+  windows-setup:
+    needs: release
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Build offline installer
+        run: python scripts/build_setup.py
+      - name: Test actual installer without registration or UI
+        run: |
+          & ./dist/YouTube-Downloader-Setup.exe --test-root "$env:RUNNER_TEMP/Downloader-Test"
+          if ($LASTEXITCODE -ne 0) { throw 'Installer test failed' }
+      - name: Upload setup to matching release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $version = (Get-Content extension/manifest.json | ConvertFrom-Json).version
+          gh release upload "v$version" dist/YouTube-Downloader-Setup.exe dist/Setup-SHA256.txt --clobber

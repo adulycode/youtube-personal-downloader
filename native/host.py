@@ -60,7 +60,9 @@ def build_command(request):
     ffmpeg = tool('ffmpeg')
     tool('ffprobe')
     deno = tool('deno')
-    command = [sys.executable,'-m','yt_dlp','--ignore-config','--no-playlist','--no-overwrites',
+    standalone = ROOT / 'tools' / 'yt-dlp.exe'
+    executable = [str(standalone)] if standalone.is_file() else [sys.executable,'-m','yt_dlp']
+    command = executable + ['--ignore-config','--no-playlist','--no-overwrites',
                '--windows-filenames','--trim-filenames','160','--newline','--no-colors',
                '--progress-template','download:PROGRESS:%(progress._percent_str)s',
                '--print','after_move:FILE:%(filepath)s','--no-simulate',

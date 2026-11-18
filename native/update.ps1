@@ -35,9 +35,10 @@ if ([IO.Path]::GetFullPath($installedRoot).TrimEnd('\') -ne [IO.Path]::GetFullPa
     Copy-Item -LiteralPath (Join-Path $sourceRoot 'CONNECT-GITHUB.cmd') -Destination (Join-Path $installedRoot 'CONNECT-GITHUB.cmd') -Force
 }
 $venvPython = Join-Path $installedNative 'venv\Scripts\python.exe'
-if (-not (Test-Path -LiteralPath $venvPython) -or -not (Test-Path -LiteralPath (Join-Path $installedNative 'host.cmd')) -or -not (Test-Path -LiteralPath $manifestPath)) {
+$bundledPython = Join-Path $installedNative 'runtime\python.exe'
+if ((-not (Test-Path -LiteralPath $venvPython) -and -not (Test-Path -LiteralPath $bundledPython)) -or -not (Test-Path -LiteralPath (Join-Path $installedNative 'host.cmd')) -or -not (Test-Path -LiteralPath $manifestPath)) {
     Write-Host 'Some helper files were moved or removed. Repairing them automatically (internet may be required)...'
-    & (Join-Path $installedNative 'install.ps1')
+    & (Join-Path $installedNative 'install.ps1') -InstallRoot $installedRoot
 }
 Write-Host 'Updated in place. No reinstall or Extension ID entry needed.'
 Write-Host 'Open chrome://extensions, click Reload on YouTube Personal Downloader, then refresh YouTube.'

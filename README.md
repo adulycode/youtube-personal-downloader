@@ -1,13 +1,13 @@
 # YouTube Personal Downloader
 
-Chrome extension and Windows helper. Read README-TH.md for installation.
+Windows 10/11 x64 Chrome extension and native helper. See README-TH.md.
 
-Version 1.4 uses public GitHub Releases over HTTPS. Client machines need no GitHub account, CLI or token. Updates are checked every six hours while Chrome runs, or immediately from the popup. After applying an update the extension reloads itself. Refresh open YouTube pages for updated content scripts.
+New users open YouTube-Downloader-Setup.exe. It embeds the source and four vendor archives (about 194 MB) and installs a private Python runtime, standalone yt-dlp, FFmpeg/ffprobe and Deno. No system Python, Store alias, winget, PATH changes or GitHub login is required. It registers only the current user's native host. Chrome requires Developer mode and Load unpacked once; the installer opens that page, opens the extension folder and copies its path. This is not a silent Chrome extension installation. The executable is unsigned.
 
-Existing users: run UPDATE.cmd from the latest package then reload the extension once. New users: run INSTALL.cmd then load the extension folder in chrome://extensions with Developer mode. Keep the installation folder in place. CONNECT-GITHUB.cmd remains for compatibility and no longer authenticates or installs anything.
+The offline package is built with scripts/build_setup.py on Windows using the system .NET Framework C# compiler. Downloads are pinned and verified by SHA-256. Run the built EXE with --test-root ABSOLUTE_PATH to test without registration or opening UI. Tests must use an isolated writable path. No global environment is changed.
 
-Source pushes to main run tests and package an explicit allowlist with SHA-256 checksums. Increase extension/manifest.json version to publish a new Release; existing releases are preserved. Build using python scripts/package.py.
+Source pushes run tests, build an allowlisted update ZIP, and publish new manifest versions. A Windows job builds and tests the actual offline installer before attaching it to the same Release. Existing small ZIP clients remain supported because the update archive's 18-file allowlist is unchanged. Version 1.6 keeps the old pip/venv downloader fallback for existing installs.
 
-The updater checks checksum, paths, version and extension identity, and rolls back failed writes. It preserves the Python environment and native registration. External dependency/schema migrations may require separate setup. SHA-256 is an integrity check, not an independent publisher signature. Only trusted maintainers should publish releases.
+Public updates need no account. Checks occur every six hours while Chrome runs or on request. Checksums, package paths, versions and extension identity are validated and failed writes are rolled back. Existing runtime, tools and registration are preserved. Binary dependencies are refreshed by running a newer Setup, not by code-only updates.
 
-Credentials, local dependencies and machine-specific manifests are excluded. Content script layout and real YouTube downloading still need live verification.
+Third-party archives are redistributed unmodified inside the installer payload; see their notices and source/build links in README-TH.md. Installer caches and binaries are excluded from source control. The offline executable is a separate Release asset, not included in the normal update ZIP.
