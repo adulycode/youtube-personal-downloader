@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Personal Downloader",
+  "version": "1.3.0",
+  "description": "ดาวน์โหลดวิดีโอหรือเสียงที่คุณมีสิทธิ์บันทึก ผ่านโปรแกรมบนเครื่อง",
+  "minimum_chrome_version": "105",
+  "permissions": [
+    "activeTab",
+    "nativeMessaging",
+    "storage",
+    "alarms"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3l3E44858TE2dF6zhxBpxkG4IIrc5KbH+ICWklmcE+M0r93WMwdTraJ4imHYU5jf0SEKedaU9yWO3d35sCxFkhdhhU7zwFGJ3daUsjifxLgal4T8NV+oaNu1tAzqZ9boUhuChRrJ3iHhbNsuo8EH5uhJJsEVcxoyiD3XffA/erDR4TD7fCv6te4XKU6GAyL8X0mpJQrdJXNh4+RB8+a12fdrUBQq9qXEzL1Ir8OQjymK3DpNYlWCxmvJigPrOVL++LVA/Iii2NoTM9F8BYAV2MR83skV73tkQZSw0ZvVBOK5fufhBFZwnI+jHkDDeDF3tkSMd7MgTE6Rfw+7DQycrQIDAQAB",
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://music.youtube.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "video-url.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

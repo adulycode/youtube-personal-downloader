@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="th"><meta charset="utf-8"><title>YouTube Downloader</title>
+<link rel="stylesheet" href="style.css">
+<body><h1>YouTube Downloader</h1><p>บันทึกวิดีโอและเพลงไว้ในเครื่อง</p>
+<label for="url">ลิงก์วิดีโอ YouTube</label><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…">
+<label for="format">รูปแบบ</label><select id="format"><option value="mp4">วิดีโอ MP4</option><option value="mp3">เสียง MP3 · 192 kbps</option></select>
+<label for="quality">ความละเอียดสูงสุด (MP4)</label><select id="quality"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="2160">4K</option></select>
+<button id="start">ดาวน์โหลด</button><button id="cancel" class="secondary" disabled>ยกเลิก</button>
+<p id="status" role="status" aria-live="polite">พร้อมใช้งาน</p><progress id="progress" max="100" value="0"></progress>
+<small>ใช้กับเนื้อหาที่คุณเป็นเจ้าของหรือได้รับอนุญาตให้ดาวน์โหลด<br>ไฟล์อยู่ใน Downloads / YouTube Personal<br>ปิดหน้าต่างนี้ได้ระหว่างดาวน์โหลด แต่ต้องเปิด Chrome ไว้</small>
+<details><summary>ตั้งค่าครั้งแรก</summary><p>รัน INSTALL.cmd จากชุดไฟล์ ตัวติดตั้งเชื่อมต่อ ID ให้อัตโนมัติ</p><p>Extension ID (สำหรับตรวจสอบ):</p><code id="extensionId"></code><p>ดูขั้นตอนใน README-TH.md ที่มากับไฟล์</p></details>
+<button id="checkUpdate" class="secondary">ตรวจอัปเดตจาก GitHub</button><p id="updateStatus" role="status"></p>
+<script src="video-url.js"></script><script src="popup.js"></script></body></html>

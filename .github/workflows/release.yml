@@ -1,0 +1,49 @@
+name: Package private release
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'extension/**'
+      - 'native/**'
+      - '*.cmd'
+      - 'README-TH.md'
+      - 'scripts/package.py'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: private-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Check syntax
+        run: |
+          python3 -m py_compile native/host.py native/github_update.py scripts/package.py
+          python3 -m unittest discover -s tests -v
+          for file in extension/*.js; do node --check "$file"; done
+      - name: Build allowlisted ZIP and checksum
+        id: package
+        run: |
+          version=$(python3 scripts/package.py)
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - name: Publish version once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.package.outputs.tag }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release exists. Increase extension/manifest.json version for the next update."
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" dist/YouTube-Downloader.zip dist/SHA256SUMS.txt dist/version.json \
+            --target "$COMMIT_SHA" --title "YouTube Personal Downloader $RELEASE_TAG" \
+            --notes "Private Windows package. Extract and run UPDATE.cmd, then reload the Chrome extension and refresh YouTube."

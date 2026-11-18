@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+native/venv/
+native/tools/
+native/host.cmd
+native/com.personal.youtube_downloader.json
+dist/
+*.zip
+.env*
+*.pem
+*.key
