@@ -80,8 +80,9 @@ def build_command(request):
 def stop_process(proc):
     if proc.poll() is None:
         if os.name == 'nt':
-            subprocess.run(['taskkill','/PID',str(proc.pid),'/T','/F'],stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.run(['taskkill','/PID',str(proc.pid),'/T','/F'],stdin=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
         else:
             proc.terminate()
 
@@ -91,8 +92,8 @@ def download(request):
     try:
         command = build_command(request)
         send('progress','กำลังอ่านข้อมูลคลิปและเตรียมดาวน์โหลด…',stage='preparing')
-        proc = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
-                                text=True,encoding='utf-8',errors='replace',
+        proc = subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',
                                 creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         def monitor():
             while not finished.wait(.2):

@@ -37,8 +37,9 @@ class HostRuntimeTests(unittest.TestCase):
             def wait(self):return 0
         events=[]
         host.CANCEL.clear()
-        with patch.object(host,'build_command',return_value=['fake']),patch.object(host.subprocess,'Popen',return_value=Process()),patch.object(host,'send',side_effect=lambda kind,message,**kw:events.append((kind,message,kw))):
+        with patch.object(host,'build_command',return_value=['fake']),patch.object(host.subprocess,'Popen',return_value=Process()) as popen,patch.object(host,'send',side_effect=lambda kind,message,**kw:events.append((kind,message,kw))):
             host.download({})
+        self.assertEqual(popen.call_args.kwargs.get('stdin'),host.subprocess.DEVNULL)
         numeric=[event for event in events if event[2].get('percent')==42.5]
         self.assertEqual(len(numeric),1)
         self.assertIn('2.5MiB/s',numeric[0][1])
