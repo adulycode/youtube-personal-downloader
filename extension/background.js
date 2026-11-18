@@ -37,7 +37,7 @@ async function checkForUpdate() {
       clearTimeout(timer);
       connection?.disconnect();
       checkingUpdate = false;
-      await chrome.storage.local.set({updateStatus:result.message});
+      await chrome.storage.local.set({updateStatus:result.message,lastUpdateCheckAt:new Date().toISOString()});
       resolve(result);
       if (result.updated) chrome.runtime.reload();
     };
@@ -55,12 +55,13 @@ async function checkForUpdate() {
 }
 function scheduleUpdates() {chrome.alarms.create('private-github-update',{delayInMinutes:2,periodInMinutes:360});}
 chrome.runtime.onInstalled.addListener(scheduleUpdates);
+chrome.runtime.onInstalled.addListener(() => chrome.storage.local.set({installedAt:new Date().toISOString()}));
 chrome.runtime.onStartup.addListener(scheduleUpdates);
 chrome.alarms.onAlarm.addListener(alarm => {if(alarm.name === 'private-github-update') checkForUpdate().catch(()=>{});});
 let writes = Promise.resolve();
 function state(value) {writes = writes.catch(()=>{}).then(()=>chrome.storage.local.set({job:value}));}
 chrome.runtime.onStartup.addListener(() => state({busy:false,message:'พร้อมใช้งาน'}));
-chrome.runtime.onInstalled.addListener(() => state({busy:false,message:'พร้อมใช้งาน — ติดตั้งโปรแกรมช่วยก่อนเริ่มดาวน์โหลด'}));
+chrome.runtime.onInstalled.addListener(() => state({busy:false,message:'พร้อมใช้งาน'}));
 async function handleMessage(msg, sender) {
   let response;
   const reply = value => {response = value;};

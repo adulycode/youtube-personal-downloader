@@ -1,4 +1,15 @@
 const $ = id => document.getElementById(id);
+const manifest = chrome.runtime.getManifest();
+$('versionInfo').textContent = 'เวอร์ชัน '+manifest.version;
+const releaseDate = manifest.version_name?.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+$('releaseInfo').textContent = 'เผยแพร่รุ่นนี้: '+(releaseDate ? new Date(releaseDate+'T12:00:00Z').toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'}) : 'ไม่ระบุ');
+function updateDates(data) {
+  const fmt = value => value ? new Date(value).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}) : 'ยังไม่มีข้อมูล';
+  $('installedInfo').textContent = 'ติดตั้ง/อัปเดตในเครื่อง: '+fmt(data.installedAt);
+  $('checkedInfo').textContent = 'ตรวจอัปเดตล่าสุด: '+fmt(data.lastUpdateCheckAt);
+}
+chrome.storage.local.get(['installedAt','lastUpdateCheckAt']).then(updateDates);
+chrome.storage.onChanged.addListener(c=>{if(c.installedAt || c.lastUpdateCheckAt) chrome.storage.local.get(['installedAt','lastUpdateCheckAt']).then(updateDates);});
 $('extensionId').textContent = chrome.runtime.id;
 let allowed = false;
 let lastJob = {};

@@ -3,6 +3,7 @@
   const get = id => ui.querySelector('#' + id);
   function close() {
     if (!ui) return;
+    if (get('menu').matches(':popover-open')) get('menu').hidePopover();
     get('menu').hidden = true;
     get('toggle').setAttribute('aria-expanded', 'false');
   }
@@ -30,12 +31,16 @@
     ui = host.attachShadow({mode:'open'});
     ui.innerHTML = `<style>
       :host{display:inline-flex;flex:0 0 auto;align-items:center;margin:0 4px;vertical-align:middle;font:14px system-ui;color:#f1f5f9}
+      :host([data-shorts]){flex-direction:column;margin:0 0 8px;width:48px;min-height:64px;pointer-events:auto}
+      :host([data-shorts]) #toggle{width:48px;height:48px}
+      #caption{display:none;font-size:11px;line-height:16px;margin-top:4px;color:#f1f5f9}
+      :host([data-shorts]) #caption{display:block}
       *{box-sizing:border-box}[hidden]{display:none!important}
       button,select{font:inherit;color:inherit}button{cursor:pointer}
       #toggle{display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#ffffff1a;color:#75a7ff}
       #toggle:hover,#toggle[aria-expanded=true]{background:#ffffff30}#toggle:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid #7eb0ff;outline-offset:3px}
       #toggle svg{width:30px;height:30px}#toggle.busy{box-shadow:inset 0 0 0 2px #73a6ff}
-      #menu{position:fixed;z-index:2147483647;width:320px;max-height:calc(100vh - 24px);overflow:auto;padding:18px;background:#202124;border:1px solid #494b50;border-radius:16px;box-shadow:0 12px 40px #0008;text-align:left}
+      #menu{position:fixed;inset:auto;margin:0;z-index:2147483647;width:320px;max-height:calc(100vh - 24px);overflow:auto;padding:18px;background:#202124;color:#f1f5f9;border:1px solid #494b50;border-radius:16px;box-shadow:0 12px 40px #0008;text-align:left}
       header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}strong{font-size:17px}
       #close{border:0;background:transparent;font-size:24px;line-height:1;padding:2px 5px;color:#cbd5e1}
       label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:12px}select{width:100%;background:#303238;border:1px solid #60636c;border-radius:8px;padding:10px}
@@ -45,6 +50,7 @@
     <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-haspopup="dialog" aria-expanded="false">
       <svg viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="16" width="120" height="86" rx="24" fill="#ff0033"/><path d="M48 35V81L84 58Z" fill="white"/><circle cx="99" cy="98" r="29" fill="#111827"/><path d="M99 80V106M88 96L99 107L110 96M86 117H112" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
+    <span id="caption">Download</span>
     <section id="menu" role="dialog" aria-label="ดาวน์โหลดจาก YouTube" hidden>
       <header><strong>ดาวน์โหลด</strong><button id="close" aria-label="ปิด">×</button></header>
       <label for="format">รูปแบบไฟล์</label><select id="format"><option value="mp4">วิดีโอ MP4</option><option value="mp3">เสียง MP3 · 192 kbps</option></select>
@@ -55,6 +61,10 @@
     get('toggle').onclick = () => {
       if (!get('menu').hidden) {close();return;}
       get('menu').hidden = false;
+      if (get('menu').showPopover) {
+        get('menu').setAttribute('popover','manual');
+        get('menu').showPopover();
+      }
       get('toggle').setAttribute('aria-expanded','true');
       position();get('format').focus();
     };
@@ -74,30 +84,55 @@
     };
     render();
   }
+  function visible(element) {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom > 64 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+  }
+  function shortsAnchor() {
+    // Modern Shorts extracts its action bar outside ytd-reel-video-renderer.
+    // Older layouts keep #actions in the reel and may omit is-active entirely.
+    const bars = Array.from(document.querySelectorAll('ytd-shorts reel-action-bar-view-model, ytd-reel-video-renderer #actions'))
+      .filter(visible).sort((a,b) => {
+        const center = e => {const r=e.getBoundingClientRect();return Math.abs((r.top+r.bottom)/2-innerHeight/2);};
+        return center(a)-center(b);
+      });
+    for (const bar of bars) {
+      const buttons = Array.from(bar.querySelectorAll('button')).filter(visible);
+      const share = buttons.find(b => /^(share|แชร์|แบ่งปัน)$/i.test(b.getAttribute('aria-label') || b.getAttribute('title') || ''));
+      const entry = share?.closest('button-view-model, ytd-button-renderer, yt-button-shape');
+      if (entry && entry.parentElement === bar) return {target:bar,after:entry};
+      return {target:bar};
+    }
+    return null;
+  }
   function mount() {
     scheduled = false;
     const url = youtubeVideoURL(location.href);
     if (url !== lastURL) {close();lastURL=url;}
     if (!url) {host?.remove();return;}
     const shorts = location.pathname.startsWith('/shorts/');
-    const target = shorts
-      ? document.querySelector('ytd-reel-video-renderer[is-active] #actions')
+    const anchor = shorts ? shortsAnchor() : null;
+    const target = shorts ? anchor?.target
       : document.querySelector('ytd-watch-metadata #actions #top-level-buttons-computed')
         || document.querySelector('ytd-watch-metadata #actions #menu')
         || document.querySelector('ytd-watch-metadata #actions')
         || document.querySelector('ytd-watch-metadata #title');
-    if (!target) return;
+    if (!target) {host?.remove();return;}
     if (!host) create();
-    if (host.parentElement !== target) target.append(host);
+    host.toggleAttribute('data-shorts',shorts);
+    host.dataset.videoUrl=url;
+    if (anchor?.after) {
+      if (anchor.after.nextElementSibling !== host) anchor.after.after(host);
+    } else if (host.parentElement !== target) target.append(host);
   }
   function schedule() {if (!scheduled) {scheduled=true;setTimeout(mount,150);}}
   chrome.storage.local.get('job').then(({job:s})=>{job=s||{};render();}).catch(()=>{});
   chrome.storage.onChanged.addListener(c=>{if(c.job){job=c.job.newValue||{};render();}});
   document.addEventListener('pointerdown',event=>{if(host&&!event.composedPath().includes(host))close();},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&ui&&!get('menu').hidden){close();get('toggle').focus();}});
-  window.addEventListener('resize',position);
-  window.addEventListener('scroll',close,true);
-  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('resize',()=>{position();schedule();});
+  window.addEventListener('scroll',()=>{close();schedule();},true);
+  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['is-active','hidden','aria-hidden','video-id']});
   document.addEventListener('yt-navigate-finish',schedule);
   window.addEventListener('popstate',schedule);
   mount();
