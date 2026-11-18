@@ -45,6 +45,9 @@
     else get('downloadProgress').value=percent;
     get('percent').textContent = percent === null ? (job.stage === 'processing' ? 'กำลังรวม/แปลงไฟล์' : 'กำลังเตรียม…') : percent.toFixed(1)+'%';
     get('toggle').classList.toggle('busy', !!job.busy);
+    get('toggle').classList.toggle('spin', !!job.busy && percent === null);
+    get('ring').hidden = !job.busy;
+    get('arc').style.strokeDashoffset = percent === null ? 72 : 100 - percent;
     get('toggle').title = job.busy ? job.message : 'ดาวน์โหลด MP4 / MP3';
     get('caption').textContent = job.busy ? (percent === null ? 'กำลังทำงาน' : Math.round(percent)+'%') : 'Download';
     position();
@@ -61,9 +64,12 @@
       :host([data-shorts]) #caption{display:block}
       *{box-sizing:border-box}[hidden]{display:none!important}
       button,select{font:inherit;color:inherit}button{cursor:pointer}
-      #toggle{display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#ffffff1a;color:#75a7ff}
+      #toggle{position:relative;display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#ffffff1a;color:#75a7ff}
       #toggle:hover,#toggle[aria-expanded=true]{background:#ffffff30}#toggle:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid #7eb0ff;outline-offset:3px}
-      #toggle svg{width:30px;height:30px}#toggle.busy{box-shadow:inset 0 0 0 2px #73a6ff}
+      #toggle>svg:first-child{width:30px;height:30px}
+      #ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+      #toggle.spin #ring{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(270deg)}}
+      #arc{transition:stroke-dashoffset .2s ease}
       #menu{position:fixed;inset:auto;margin:0;z-index:2147483647;width:320px;max-height:calc(100vh - 24px);overflow:auto;padding:18px;background:#202124;color:#f1f5f9;border:1px solid #494b50;border-radius:16px;box-shadow:0 12px 40px #0008;text-align:left}
       header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}strong{font-size:17px}
       #close{border:0;background:transparent;font-size:24px;line-height:1;padding:2px 5px;color:#cbd5e1}
@@ -75,6 +81,7 @@
     </style>
     <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-haspopup="dialog" aria-expanded="false">
       <svg viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="16" width="120" height="86" rx="24" fill="#ff0033"/><path d="M48 35V81L84 58Z" fill="white"/><circle cx="99" cy="98" r="29" fill="#111827"/><path d="M99 80V106M88 96L99 107L110 96M86 117H112" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg id="ring" viewBox="0 0 40 40" aria-hidden="true" hidden><circle cx="20" cy="20" r="18.75" fill="none" stroke="#73a6ff38" stroke-width="2.5"/><circle id="arc" cx="20" cy="20" r="18.75" fill="none" stroke="#73a6ff" stroke-width="2.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="72"/></svg>
     </button>
     <span id="caption">Download</span>
     <section id="menu" role="dialog" aria-label="ดาวน์โหลดจาก YouTube" hidden>
