@@ -29,6 +29,7 @@ jobs:
           python3 -m unittest discover -s tests -v
           for file in extension/*.js; do node --check "$file"; done
           node tests/test_popup.cjs
+          node tests/test_background.cjs
       - name: Build allowlisted ZIP and checksum
         id: package
         run: |

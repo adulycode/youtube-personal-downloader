@@ -1,4 +1,4 @@
-# YouTube Personal Downloader 1.6 — Windows 10/11 64-bit
+# YouTube Personal Downloader 1.6.1 — Windows 10/11 64-bit
 
 ## ส่งให้ผู้ใช้ใหม่
 
@@ -53,3 +53,9 @@ yt-dlp 2026.10.26: https://github.com/yt-dlp/yt-dlp
 FFmpeg 9.0.2 Gyan essentials: https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2 และ https://www.gyan.dev/ffmpeg/builds/ (GPLv3; ดู license/build/source information ที่แนบใน archive ต้นทาง)
 Deno 2.9.8: https://github.com/denoland/deno/releases/tag/v2.9.8 (MIT)
 ตัวติดตั้ง offline เก็บ archive ต้นทางครบใน resource ของ Setup เพื่อคงเอกสารที่มากับโปรแกรม
+
+## การแสดงความคืบหน้า 1.6.1
+
+แถบและเปอร์เซ็นต์อยู่ใต้ปุ่มดาวน์โหลดในเมนูบน YouTube พร้อมความเร็วและเวลาที่เหลือถ้าทราบ
+ระหว่างอ่านข้อมูลหรือรวม/แปลงไฟล์จะแสดงแถบเคลื่อนไหว ไม่มีเปอร์เซ็นต์สมมติ เมื่อเสร็จหรือมีข้อผิดพลาดจะแสดงข้อความชัดเจน
+เปอร์เซ็นต์เป็นไฟล์ที่กำลังดาวน์โหลด วิดีโอและเสียงที่ดาวน์โหลดแยกกันอาจเริ่มนับใหม่ก่อนรวมไฟล์

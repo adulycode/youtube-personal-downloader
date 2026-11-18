@@ -64,7 +64,9 @@ def build_command(request):
     executable = [str(standalone)] if standalone.is_file() else [sys.executable,'-m','yt_dlp']
     command = executable + ['--ignore-config','--no-playlist','--no-overwrites',
                '--windows-filenames','--trim-filenames','160','--newline','--no-colors',
-               '--progress-template','download:PROGRESS:%(progress._percent_str)s',
+               '--progress','--progress-delta','0.5',
+               '--progress-template','download:PROGRESS:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s',
+               '--progress-template','postprocess:POSTPROCESS:%(progress.status)s',
                '--print','after_move:FILE:%(filepath)s','--no-simulate',
                '--ffmpeg-location',str(Path(ffmpeg).parent),'--js-runtimes','deno:'+deno,
                '-P',str(target),'-o','%(title)s [%(id)s].%(ext)s']
@@ -88,7 +90,7 @@ def download(request):
     finished = threading.Event()
     try:
         command = build_command(request)
-        send('progress','กำลังเตรียมดาวน์โหลด…')
+        send('progress','กำลังอ่านข้อมูลคลิปและเตรียมดาวน์โหลด…',stage='preparing')
         proc = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
                                 text=True,encoding='utf-8',errors='replace',
                                 creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -107,12 +109,20 @@ def download(request):
             if line.startswith('FILE:'):
                 output = line[5:]
             elif line.startswith('PROGRESS:'):
-                match = re.search(r'(\d+(?:\.\d+)?)%',line)
+                fields = line[len('PROGRESS:'):].split('|')
+                match = re.search(r'(\d+(?:\.\d+)?)%',fields[0])
                 if match:
-                    percent = float(match.group(1))
-                    send('progress',f'กำลังดาวน์โหลด {percent:.1f}%',percent=percent)
-            elif line.startswith(('[ExtractAudio]','[Merger]')):
-                send('progress','กำลังแปลงเสียงหรือรวมไฟล์…')
+                    percent = min(100,max(0,float(match.group(1))))
+                    details = [f'กำลังดาวน์โหลด {percent:.1f}%']
+                    if len(fields)>1 and fields[1].strip() not in ('','NA','Unknown'):
+                        details.append(fields[1].strip())
+                    if len(fields)>2 and fields[2].strip() not in ('','NA','Unknown'):
+                        details.append('เหลือประมาณ '+fields[2].strip())
+                    send('progress',' · '.join(details),percent=percent,stage='downloading')
+                else:
+                    send('progress','กำลังดาวน์โหลด… รอข้อมูลขนาดไฟล์',stage='downloading')
+            elif line.startswith(('POSTPROCESS:','[ExtractAudio]','[Merger]')):
+                send('progress','กำลังแปลงเสียงหรือรวมไฟล์… กรุณารอสักครู่',stage='processing')
         code = proc.wait()
         if CANCEL.is_set():
             send('cancelled','ยกเลิกแล้ว (ไฟล์ชั่วคราวอาจยังอยู่ในโฟลเดอร์ดาวน์โหลด)')

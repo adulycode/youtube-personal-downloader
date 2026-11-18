@@ -1,6 +1,18 @@
 (() => {
-  let host, ui, job = {}, scheduled = false, lastURL = '';
+  let host, ui, job = {}, scheduled = false, lastURL = '', starting = false, polling = false, revision = 0;
   const get = id => ui.querySelector('#' + id);
+  function receiveJob(next) {
+    if (!next || starting) return;
+    if (next.updatedAt && job.updatedAt && next.updatedAt < job.updatedAt) return;
+    revision++;
+    job=next;
+    render();
+  }
+  async function refreshJob() {
+    if (polling || starting || !ui || (!job.busy && get('menu').hidden)) return;
+    polling=true;
+    try {const r=await chrome.runtime.sendMessage({action:'get_job'});receiveJob(r?.job);} catch {} finally {polling=false;}
+  }
   function close() {
     if (!ui) return;
     if (get('menu').matches(':popover-open')) get('menu').hidePopover();
@@ -20,10 +32,22 @@
   function render() {
     if (!ui) return;
     get('start').disabled = !!job.busy;
+    get('start').textContent = job.busy ? 'กำลังทำงาน…' : 'ดาวน์โหลดลงเครื่อง';
     get('cancel').hidden = !job.busy;
+    get('cancel').disabled = starting || job.stage === 'cancelling';
+    get('format').disabled = !!job.busy;
+    get('quality').disabled = !!job.busy || get('format').value === 'mp3';
     get('status').textContent = job.message || 'เลือกไฟล์ที่ต้องการดาวน์โหลด';
+    get('status').dataset.stage=job.stage || '';
+    const percent = Number.isFinite(job.percent) ? Math.max(0,Math.min(100,job.percent)) : null;
+    get('progressArea').hidden = !job.busy && job.stage !== 'done';
+    if (percent === null) get('downloadProgress').removeAttribute('value');
+    else get('downloadProgress').value=percent;
+    get('percent').textContent = percent === null ? (job.stage === 'processing' ? 'กำลังรวม/แปลงไฟล์' : 'กำลังเตรียม…') : percent.toFixed(1)+'%';
     get('toggle').classList.toggle('busy', !!job.busy);
-    get('toggle').title = job.busy ? 'กำลังดาวน์โหลด — คลิกดูสถานะ' : 'ดาวน์โหลด MP4 / MP3';
+    get('toggle').title = job.busy ? job.message : 'ดาวน์โหลด MP4 / MP3';
+    get('caption').textContent = job.busy ? (percent === null ? 'กำลังทำงาน' : Math.round(percent)+'%') : 'Download';
+    position();
   }
   function create() {
     host = document.createElement('div');
@@ -46,6 +70,8 @@
       label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:12px}select{width:100%;background:#303238;border:1px solid #60636c;border-radius:8px;padding:10px}
       #start,#cancel{width:100%;padding:11px;border:0;border-radius:9px;margin-top:14px;background:#3970ff;font-weight:600}#cancel{background:#41444b;margin-top:8px}
       button:disabled{opacity:.5;cursor:default}#status{margin:12px 0 8px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}small{font-size:11px;color:#aab2c0;line-height:1.6}
+      #progressArea{margin-top:14px}#downloadProgress{display:block;width:100%;height:10px;accent-color:#4f83ff}#percent{display:block;text-align:right;margin-top:5px;font-size:13px;font-weight:600}
+      #status[data-stage=error]{color:#fda4af}#status[data-stage=done]{color:#86efac}
     </style>
     <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-haspopup="dialog" aria-expanded="false">
       <svg viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="16" width="120" height="86" rx="24" fill="#ff0033"/><path d="M48 35V81L84 58Z" fill="white"/><circle cx="99" cy="98" r="29" fill="#111827"/><path d="M99 80V106M88 96L99 107L110 96M86 117H112" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -56,6 +82,7 @@
       <label for="format">รูปแบบไฟล์</label><select id="format"><option value="mp4">วิดีโอ MP4</option><option value="mp3">เสียง MP3 · 192 kbps</option></select>
       <label for="quality">ความละเอียดสูงสุด</label><select id="quality"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="2160">4K</option></select>
       <button id="start">ดาวน์โหลดลงเครื่อง</button><button id="cancel" hidden>ยกเลิกดาวน์โหลด</button>
+      <div id="progressArea" hidden><progress id="downloadProgress" max="100" aria-label="ความคืบหน้าดาวน์โหลด"></progress><span id="percent"></span></div>
       <div id="status" role="status" aria-live="polite"></div><small>บันทึกใน Downloads / YouTube Personal<br>ใช้กับเนื้อหาที่คุณมีสิทธิ์ดาวน์โหลด</small>
     </section>`;
     get('toggle').onclick = () => {
@@ -66,21 +93,27 @@
         get('menu').showPopover();
       }
       get('toggle').setAttribute('aria-expanded','true');
-      position();get('format').focus();
+      position();get('format').focus();refreshJob();
     };
     get('close').onclick = () => {close();get('toggle').focus();};
     get('format').onchange = () => {get('quality').disabled = get('format').value === 'mp3';};
     get('start').onclick = async () => {
       const url = youtubeVideoURL(location.href);
       if (!url) {close();return;}
-      get('start').disabled = true;
+      starting=true;
+      revision++;
+      job={busy:true,stage:'connecting',message:'กำลังส่งคำสั่งและเชื่อมต่อโปรแกรมช่วย…'};
+      render();position();
       try {
         const response = await chrome.runtime.sendMessage({action:'start',url,format:get('format').value,quality:Number(get('quality').value)});
-        if (response?.error) {render();get('status').textContent=response.error;}
-      } catch {render();get('status').textContent='กรุณารีเฟรชหน้า YouTube แล้วลองอีกครั้ง';}
+        starting=false;
+        if (response?.error) receiveJob({busy:false,stage:'error',message:response.error});
+        else {if(response?.job) receiveJob(response.job);await refreshJob();}
+      } catch {starting=false;receiveJob({busy:false,stage:'error',message:'เชื่อมส่วนขยายไม่ได้ กรุณารีเฟรชหน้า YouTube แล้วลองอีกครั้ง'});}
     };
     get('cancel').onclick = async () => {
-      try {await chrome.runtime.sendMessage({action:'cancel'});} catch {get('status').textContent='กรุณารีเฟรชหน้า YouTube';}
+      job={...job,stage:'cancelling',message:'กำลังยกเลิกดาวน์โหลด…'};render();
+      try {const r=await chrome.runtime.sendMessage({action:'cancel'});if(r?.error) get('status').textContent=r.error;} catch {get('status').textContent='กรุณารีเฟรชหน้า YouTube';}
     };
     render();
   }
@@ -126,8 +159,10 @@
     } else if (host.parentElement !== target) target.append(host);
   }
   function schedule() {if (!scheduled) {scheduled=true;setTimeout(mount,150);}}
-  chrome.storage.local.get('job').then(({job:s})=>{job=s||{};render();}).catch(()=>{});
-  chrome.storage.onChanged.addListener(c=>{if(c.job){job=c.job.newValue||{};render();}});
+  const initialRevision=revision;
+  chrome.storage.local.get('job').then(({job:s})=>{if(revision===initialRevision) receiveJob(s||{});}).catch(()=>{});
+  chrome.storage.onChanged.addListener(c=>{if(c.job) receiveJob(c.job.newValue||{});});
+  setInterval(refreshJob,1000);
   document.addEventListener('pointerdown',event=>{if(host&&!event.composedPath().includes(host))close();},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&ui&&!get('menu').hidden){close();get('toggle').focus();}});
   window.addEventListener('resize',()=>{position();schedule();});

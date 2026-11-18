@@ -59,13 +59,20 @@ chrome.runtime.onInstalled.addListener(() => chrome.storage.local.set({installed
 chrome.runtime.onStartup.addListener(scheduleUpdates);
 chrome.alarms.onAlarm.addListener(alarm => {if(alarm.name === 'private-github-update') checkForUpdate().catch(()=>{});});
 let writes = Promise.resolve();
-function state(value) {writes = writes.catch(()=>{}).then(()=>chrome.storage.local.set({job:value}));}
+let latestJob = null;
+function state(value) {
+  const snapshot = {...value,updatedAt:Date.now()};
+  latestJob = snapshot;
+  writes = writes.catch(()=>{}).then(()=>chrome.storage.local.set({job:snapshot}));
+  return writes;
+}
 chrome.runtime.onStartup.addListener(() => state({busy:false,message:'พร้อมใช้งาน'}));
 chrome.runtime.onInstalled.addListener(() => state({busy:false,message:'พร้อมใช้งาน'}));
 async function handleMessage(msg, sender) {
   let response;
   const reply = value => {response = value;};
   if(sender.id !== chrome.runtime.id) return;
+  if(msg.action === 'get_job') return {job:latestJob || (await chrome.storage.local.get('job')).job || {busy:false,message:'พร้อมใช้งาน'}};
   if(msg.action === 'check_update') {
     if (sender.tab || !sender.url?.startsWith(chrome.runtime.getURL(''))) return {error:'เปิดจากหน้าส่วนขยายเท่านั้น'};
     return checkForUpdate();
@@ -83,15 +90,15 @@ async function handleMessage(msg, sender) {
   if(msg.action !== 'start') return;
   if(running || checkingUpdate) return {error:'มีงานดาวน์โหลดหรือตรวจอัปเดตอยู่ กรุณารอสักครู่'};
   running = true;
-  state({busy:true,message:'กำลังเชื่อมต่อโปรแกรมช่วย…'});
   try {
+    await state({busy:true,stage:'connecting',message:'กำลังเชื่อมต่อโปรแกรมช่วย…'});
     const connection = chrome.runtime.connectNative('com.personal.youtube_downloader');
     port = connection;
     connection.onMessage.addListener(data => {
-      if(data.type === 'progress') state({busy:true,message:data.message,percent:data.percent});
+      if(data.type === 'progress') state({busy:true,message:data.message,percent:data.percent,stage:data.stage || 'downloading'});
       if(['done','error','cancelled'].includes(data.type)) {
         running = false;
-        state({busy:false,message:data.message,percent:data.type === 'done' ? 100 : 0});
+        state({busy:false,stage:data.type,message:data.message,percent:data.type === 'done' ? 100 : 0});
         port = null;
         connection.disconnect();
       }
@@ -100,11 +107,11 @@ async function handleMessage(msg, sender) {
       const error = chrome.runtime.lastError?.message;
       if(port !== connection) return;
       port = null; running = false;
-      state({busy:false,message:error ? 'เชื่อมต่อไม่ได้: '+error+' — ตรวจสอบการติดตั้งโปรแกรมช่วยและ Extension ID' : 'โปรแกรมช่วยปิดการเชื่อมต่อ'});
+      state({busy:false,stage:'error',message:error ? 'เชื่อมต่อไม่ได้: '+error+' — ตรวจสอบการติดตั้งโปรแกรมช่วยและ Extension ID' : 'โปรแกรมช่วยปิดการเชื่อมต่อ'});
     });
     connection.postMessage(msg);
-    reply({ok:true});
-  } catch(e) {running=false; state({busy:false,message:e.message}); reply({error:e.message});}
+    reply({ok:true,job:latestJob});
+  } catch(e) {running=false; state({busy:false,stage:'error',message:e.message}); reply({error:e.message});}
   return response;
 }
 chrome.runtime.onMessage.addListener((msg,sender,reply) => {
