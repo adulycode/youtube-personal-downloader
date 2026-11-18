@@ -1,4 +1,26 @@
 importScripts('video-url.js');
+// Draw the toolbar icon in code so existing installations can receive it
+// without adding files that older updater allowlists would reject.
+async function setDownloaderIcon() {
+  const imageData = {};
+  for (const size of [16,32,48,128]) {
+    const canvas = new OffscreenCanvas(size,size);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(size/128,size/128);
+    ctx.fillStyle = '#ff0033';
+    ctx.beginPath();ctx.roundRect(4,16,120,86,24);ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();ctx.moveTo(48,35);ctx.lineTo(48,81);ctx.lineTo(84,58);ctx.closePath();ctx.fill();
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();ctx.arc(99,98,29,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=8;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(99,80);ctx.lineTo(99,106);ctx.moveTo(88,96);ctx.lineTo(99,107);ctx.lineTo(110,96);ctx.moveTo(86,117);ctx.lineTo(112,117);ctx.stroke();
+    imageData[size]=ctx.getImageData(0,0,size,size);
+  }
+  await chrome.action.setIcon({imageData});
+  await chrome.action.setTitle({title:'YouTube Downloader · MP4 / MP3'});
+}
+setDownloaderIcon().catch(()=>{});
 let port = null;
 let running = false;
 let checkingUpdate = false;

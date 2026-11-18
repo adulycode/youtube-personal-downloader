@@ -34,7 +34,7 @@
       button,select{font:inherit;color:inherit}button{cursor:pointer}
       #toggle{display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#ffffff1a;color:#75a7ff}
       #toggle:hover,#toggle[aria-expanded=true]{background:#ffffff30}#toggle:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid #7eb0ff;outline-offset:3px}
-      #toggle svg{width:23px;height:23px}#toggle.busy{box-shadow:inset 0 0 0 2px #73a6ff}
+      #toggle svg{width:30px;height:30px}#toggle.busy{box-shadow:inset 0 0 0 2px #73a6ff}
       #menu{position:fixed;z-index:2147483647;width:320px;max-height:calc(100vh - 24px);overflow:auto;padding:18px;background:#202124;border:1px solid #494b50;border-radius:16px;box-shadow:0 12px 40px #0008;text-align:left}
       header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}strong{font-size:17px}
       #close{border:0;background:transparent;font-size:24px;line-height:1;padding:2px 5px;color:#cbd5e1}
@@ -43,7 +43,7 @@
       button:disabled{opacity:.5;cursor:default}#status{margin:12px 0 8px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}small{font-size:11px;color:#aab2c0;line-height:1.6}
     </style>
     <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-haspopup="dialog" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>
+      <svg viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="16" width="120" height="86" rx="24" fill="#ff0033"/><path d="M48 35V81L84 58Z" fill="white"/><circle cx="99" cy="98" r="29" fill="#111827"/><path d="M99 80V106M88 96L99 107L110 96M86 117H112" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <section id="menu" role="dialog" aria-label="ดาวน์โหลดจาก YouTube" hidden>
       <header><strong>ดาวน์โหลด</strong><button id="close" aria-label="ปิด">×</button></header>
