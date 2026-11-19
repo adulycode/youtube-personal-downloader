@@ -93,13 +93,15 @@ Write-Host ''
 Write-Host 'SUCCESS - All helper programs are installed and verified.' -ForegroundColor Green
 $extensionFolder=Join-Path $InstallRoot 'extension'
 Write-Host ('Extension folder: '+$extensionFolder)
-Write-Host 'Chrome: Developer mode > Load unpacked > paste the extension folder.'
+Write-Host '1. In Chrome (chrome://extensions), turn ON "Developer mode" (top-right).' -ForegroundColor Cyan
+Write-Host '2. Drag the highlighted "extension" folder from Explorer and drop it onto Chrome.' -ForegroundColor Cyan
+Write-Host '   (Or click "Load unpacked" and press Ctrl+V to paste the copied path.)'
 Write-Host 'Already installed? Click Reload on the existing extension instead.'
 Write-Host 'No system Python, Microsoft Store, winget or GitHub login is required.'
 if(-not $NoOpen){
     try{Set-Clipboard -Value $extensionFolder}catch{}
-    Start-Process explorer.exe -ArgumentList ('"'+$extensionFolder+'"')
     $chromePaths=@((Join-Path ${env:ProgramFiles} 'Google\Chrome\Application\chrome.exe'),(Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'),(Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe'))
     $chromePath=$chromePaths|Where-Object{Test-Path -LiteralPath $_}|Select-Object -First 1
-    if($chromePath){Start-Process -FilePath $chromePath -ArgumentList 'chrome://extensions'}
+    if($chromePath){Start-Process -FilePath $chromePath -ArgumentList 'chrome://extensions';Start-Sleep -Milliseconds 600}
+    Start-Process explorer.exe -ArgumentList ('/select,"'+$extensionFolder+'"')
 }

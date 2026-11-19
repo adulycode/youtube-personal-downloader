@@ -28,7 +28,7 @@ class Setup {
             start.EnvironmentVariables["PSModulePath"]=Path.Combine(Environment.SystemDirectory,"WindowsPowerShell","v1.0","Modules");
             Process process=Process.Start(start);process.WaitForExit();
             if(process.ExitCode!=0)throw new Exception("Installer stopped. Details are above. Temporary files: "+temp);
-            Console.WriteLine("\nInstalled successfully. Chrome still requires Load unpacked once.");
+            Console.WriteLine("\nInstalled successfully. Turn ON Developer mode in chrome://extensions, then drag & drop the highlighted 'extension' folder into Chrome.");
             // Delete only our unique temporary staging directory, never the install target.
             string parent=Path.GetFullPath(Path.GetDirectoryName(temp)).TrimEnd(Path.DirectorySeparatorChar);
             if(parent==Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar) && Path.GetFileName(temp).StartsWith("YouTubeDownloaderSetup-")) {
