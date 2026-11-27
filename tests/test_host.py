@@ -30,6 +30,18 @@ class HostRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             self.assertEqual(self.command(Path(folder))[:3],[sys.executable,'-m','yt_dlp'])
 
+    def test_custom_target_folder_and_ask_folder(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);(root/'tools').mkdir();(root/'tools/yt-dlp.exe').touch()
+            with patch.object(host,'ROOT',root),patch.object(host,'tool',side_effect=lambda n:str(root/'tools'/(n+'.exe'))):
+                cmd=host.build_command({'url':'https://www.youtube.com/shorts/1Ujb6FTm59I','format':'mp4','quality':1080,'folder':str(root/'CustomSave')})
+            idx=cmd.index('-P')
+            self.assertEqual(cmd[idx+1],str(root/'CustomSave'))
+        events=[]
+        with patch.object(host,'pick_folder',return_value=None),patch.object(host,'send',side_effect=lambda k,m,**kw:events.append((k,m,kw))):
+            host.download({'url':'https://www.youtube.com/shorts/1Ujb6FTm59I','format':'mp4','quality':1080,'askFolder':True})
+        self.assertEqual(events[-1][0],'cancelled')
+
     def test_progress_speed_eta_processing_and_completion(self):
         class Process:
             stdout=io.StringIO('PROGRESS: 42.5%|2.5MiB/s|00:12\nPOSTPROCESS:started\nFILE:C:/Downloads/song.mp3\n')

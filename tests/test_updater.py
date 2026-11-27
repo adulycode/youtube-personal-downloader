@@ -32,32 +32,32 @@ class UpdateTests(unittest.TestCase):
         return archive,checksum
 
     def test_valid_bundle(self):
-        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.7')
+        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.8')
         self.assertEqual(set(content),set(updater.FILES))
 
     def test_checksum_mismatch(self):
         archive,checksum=self.bundle()
         archive.write_bytes(archive.read_bytes()+b'changed')
         with self.assertRaisesRegex(ValueError,'checksum mismatch'):
-            updater.validate_bundle(archive,checksum,self.current,'v1.6.7')
+            updater.validate_bundle(archive,checksum,self.current,'v1.6.8')
 
     def test_unexpected_path_rejected(self):
         with self.assertRaisesRegex(ValueError,'Unexpected package'):
-            updater.validate_bundle(*self.bundle(extra='../../outside.txt'),self.current,'v1.6.7')
+            updater.validate_bundle(*self.bundle(extra='../../outside.txt'),self.current,'v1.6.8')
 
     def test_identity_mismatch_rejected(self):
         def mutate(content):
             m=json.loads(content['extension/manifest.json']);m['key']='different'
             content['extension/manifest.json']=json.dumps(m).encode()
         with self.assertRaisesRegex(ValueError,'identity differs'):
-            updater.validate_bundle(*self.bundle(mutate=mutate),self.current,'v1.6.7')
+            updater.validate_bundle(*self.bundle(mutate=mutate),self.current,'v1.6.8')
 
     def test_tag_mismatch_rejected(self):
         with self.assertRaisesRegex(ValueError,'version mismatch'):
             updater.validate_bundle(*self.bundle(),self.current,'v9.0.0')
 
     def test_preserves_environment(self):
-        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.7')
+        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.8')
         root=self.stage/'install'
         venv=root/'native/venv/keep.txt';venv.parent.mkdir(parents=True);venv.write_text('keep')
         with patch.object(updater,'ROOT',root):updater.apply_bundle(content)
@@ -65,7 +65,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual((root/'extension/content.js').read_bytes(),content['extension/content.js'])
 
     def test_rolls_back_failed_write(self):
-        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.7')
+        content=updater.validate_bundle(*self.bundle(),self.current,'v1.6.8')
         root=self.stage/'install'
         originals={}
         for name in updater.FILES:
@@ -83,7 +83,7 @@ class UpdateTests(unittest.TestCase):
         for name,data in originals.items():self.assertEqual((root/name).read_bytes(),data)
 
     def test_no_new_version_does_not_download(self):
-        release=json.dumps({'tag_name':'v1.6.7'}).encode()
+        release=json.dumps({'tag_name':'v1.6.8'}).encode()
         with patch.object(updater,'public_get',return_value=release) as request:
             result=updater.check_update()
         self.assertFalse(result['updated']);self.assertEqual(request.call_count,1)

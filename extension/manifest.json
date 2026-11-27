@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Personal Downloader",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "ดาวน์โหลดวิดีโอหรือเสียงที่คุณมีสิทธิ์บันทึก ผ่านโปรแกรมบนเครื่อง",
   "minimum_chrome_version": "114",
   "permissions": [
@@ -38,5 +38,5 @@
       "run_at": "document_idle"
     }
   ],
-  "version_name": "1.6.7 (2026-11-19)"
+  "version_name": "1.6.8 (2026-11-27)"
 }

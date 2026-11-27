@@ -48,6 +48,77 @@ def tool(name):
         raise ValueError('Missing '+name+'. Install dependencies; see README-TH.md')
     return found
 
+def target_folder(value):
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return Path.home() / 'Downloads' / 'YouTube Personal'
+    if not isinstance(value, str) or len(value) > 500 or '\x00' in value:
+        raise ValueError('โฟลเดอร์ที่บันทึกไม่ถูกต้อง')
+    path = Path(value.strip()).expanduser()
+    if not path.is_absolute():
+        raise ValueError('กรุณาระบุพาธเต็มของโฟลเดอร์ เช่น D:\\YouTube')
+    return path
+
+def pick_folder(initial=None):
+    if os.name != 'nt':
+        return None
+    import ctypes
+    from ctypes import wintypes, byref, POINTER, c_void_p, c_uint, c_wchar_p, HRESULT
+    ole32 = ctypes.windll.ole32
+    shell32 = ctypes.windll.shell32
+    ole32.CoInitialize(None)
+    class GUID(ctypes.Structure):
+        _fields_ = [('d1', c_uint), ('d2', wintypes.WORD), ('d3', wintypes.WORD), ('d4', ctypes.c_ubyte * 8)]
+        def __init__(self, s):
+            ole32.CLSIDFromString(c_wchar_p(s), byref(self))
+    clsid = GUID('{DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7}')
+    iid_dlg = GUID('{D57C7288-D4AD-4768-BE02-9D969532D960}')
+    iid_item = GUID('{43826D1E-E718-42EE-BC55-A1E261C37BFE}')
+    dlg = c_void_p()
+    if ole32.CoCreateInstance(byref(clsid), None, 1, byref(iid_dlg), byref(dlg)) != 0 or not dlg:
+        return None
+    vt = ctypes.cast(ctypes.cast(dlg, POINTER(c_void_p))[0], POINTER(c_void_p))
+    Release = ctypes.WINFUNCTYPE(c_uint, c_void_p)(vt[2])
+    Show = ctypes.WINFUNCTYPE(HRESULT, c_void_p, wintypes.HWND)(vt[3])
+    SetOptions = ctypes.WINFUNCTYPE(HRESULT, c_void_p, c_uint)(vt[9])
+    GetOptions = ctypes.WINFUNCTYPE(HRESULT, c_void_p, POINTER(c_uint))(vt[10])
+    SetFolder = ctypes.WINFUNCTYPE(HRESULT, c_void_p, c_void_p)(vt[12])
+    SetTitle = ctypes.WINFUNCTYPE(HRESULT, c_void_p, c_wchar_p)(vt[17])
+    GetResult = ctypes.WINFUNCTYPE(HRESULT, c_void_p, POINTER(c_void_p))(vt[20])
+    try:
+        opts = c_uint()
+        GetOptions(dlg, byref(opts))
+        SetOptions(dlg, opts.value | 0x20 | 0x40)
+        SetTitle(dlg, 'เลือกโฟลเดอร์สำหรับบันทึกวิดีโอ / เสียง YouTube')
+        start = Path.home() / 'Downloads'
+        try:
+            cand = target_folder(initial)
+            start = cand if cand.is_dir() else (cand.parent if cand.parent.is_dir() else start)
+        except Exception:
+            pass
+        item = c_void_p()
+        if shell32.SHCreateItemFromParsingName(c_wchar_p(str(start)), None, byref(iid_item), byref(item)) == 0 and item:
+            SetFolder(dlg, item)
+            ivt0 = ctypes.cast(ctypes.cast(item, POINTER(c_void_p))[0], POINTER(c_void_p))
+            ctypes.WINFUNCTYPE(c_uint, c_void_p)(ivt0[2])(item)
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        if Show(dlg, hwnd) != 0:
+            return None
+        res = c_void_p()
+        if GetResult(dlg, byref(res)) != 0 or not res:
+            return None
+        ivt = ctypes.cast(ctypes.cast(res, POINTER(c_void_p))[0], POINTER(c_void_p))
+        GetDisplayName = ctypes.WINFUNCTYPE(HRESULT, c_void_p, c_uint, POINTER(c_void_p))(ivt[5])
+        ReleaseItem = ctypes.WINFUNCTYPE(c_uint, c_void_p)(ivt[2])
+        psz = c_void_p()
+        path = None
+        if GetDisplayName(res, 0x80058000, byref(psz)) == 0 and psz:
+            path = ctypes.wstring_at(psz)
+            ole32.CoTaskMemFree(psz)
+        ReleaseItem(res)
+        return path
+    finally:
+        Release(dlg)
+
 def build_command(request):
     url = canonical_url(request.get('url'))
     mode = request.get('format')
@@ -56,7 +127,7 @@ def build_command(request):
     quality = request.get('quality',1080)
     if type(quality) is not int or quality not in (720,1080,2160):
         raise ValueError('Invalid quality')
-    target = Path.home() / 'Downloads' / 'YouTube Personal'
+    target = target_folder(request.get('folder'))
     ffmpeg = tool('ffmpeg')
     tool('ffprobe')
     deno = tool('deno')
@@ -90,6 +161,15 @@ def download(request):
     proc = None
     finished = threading.Event()
     try:
+        if request.get('askFolder'):
+            send('progress','กำลังรอเลือกโฟลเดอร์ที่บันทึก…',stage='preparing')
+            chosen = pick_folder(request.get('folder'))
+            if not chosen:
+                send('cancelled','ยกเลิกการเลือกโฟลเดอร์')
+                return
+            request = dict(request, folder=chosen)
+            send('folder_selected',chosen,folder=chosen)
+        target = target_folder(request.get('folder'))
         command = build_command(request)
         send('progress','กำลังอ่านข้อมูลคลิปและเตรียมดาวน์โหลด…',stage='preparing')
         proc = subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,
@@ -130,7 +210,7 @@ def download(request):
         elif code:
             send('error','ดาวน์โหลดไม่สำเร็จ: '+' | '.join(recent)[-2500:])
         else:
-            send('done','บันทึกแล้ว: '+(output or str(Path.home()/'Downloads'/'YouTube Personal')))
+            send('done','บันทึกแล้ว: '+(output or str(target)))
     except Exception as exc:
         send('error',str(exc))
     finally:
@@ -163,6 +243,9 @@ def main():
                 raise ValueError('Invalid request')
             if request.get('action') == 'cancel':
                 CANCEL.set()
+            elif request.get('action') == 'pick_folder':
+                chosen = pick_folder(request.get('folder'))
+                send('folder_result',chosen or '',folder=chosen)
             elif request.get('action') == 'check_update':
                 if worker and worker.is_alive():
                     send('update_result','กำลังดาวน์โหลดอยู่ จะตรวจอัปเดตภายหลัง',updated=False)

@@ -40,6 +40,9 @@
     get('cancel').disabled = starting || job.stage === 'cancelling';
     get('format').disabled = !!job.busy;
     get('quality').disabled = !!job.busy || get('format').value === 'mp3';
+    get('folder').disabled = !!job.busy;
+    get('pickFolder').disabled = !!job.busy;
+    get('askFolder').disabled = !!job.busy;
     get('status').textContent = job.message || 'เลือกไฟล์ที่ต้องการดาวน์โหลด';
     get('status').dataset.stage=job.stage || '';
     const percent = Number.isFinite(job.percent) ? Math.max(0,Math.min(100,job.percent)) : null;
@@ -77,7 +80,9 @@
       #menu{position:fixed;inset:auto;margin:0;z-index:2147483647;width:320px;max-height:calc(100vh - 24px);overflow:auto;padding:18px;background:#202124;color:#f1f5f9;border:1px solid #494b50;border-radius:16px;box-shadow:0 12px 40px #0008;text-align:left}
       header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}strong{font-size:17px}
       #close{border:0;background:transparent;font-size:24px;line-height:1;padding:2px 5px;color:#cbd5e1}
-      label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:12px}select{width:100%;background:#303238;border:1px solid #60636c;border-radius:8px;padding:10px}
+      label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:12px}select,input[type=text]{width:100%;background:#303238;border:1px solid #60636c;border-radius:8px;padding:10px;font:inherit;color:inherit}
+      .folder-row{display:flex;gap:6px;align-items:center}.folder-row input{flex:1;min-width:0;padding:8px 10px;font-size:12px}#pickFolder{flex:0 0 auto;padding:8px 12px;border:1px solid #60636c;border-radius:8px;background:#303238;font-size:12px;white-space:nowrap}
+      #askRow{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:12px;color:#e2e8f0;cursor:pointer}#askRow input{width:15px;height:15px;margin:0;accent-color:#3970ff}
       #start,#cancel{width:100%;padding:11px;border:0;border-radius:9px;margin-top:14px;background:#3970ff;font-weight:600}#cancel{background:#41444b;margin-top:8px}
       button:disabled{opacity:.5;cursor:default}#status{margin:12px 0 8px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}small{font-size:11px;color:#aab2c0;line-height:1.6}
       #progressArea{margin-top:14px}#downloadProgress{display:block;width:100%;height:10px;accent-color:#4f83ff}#percent{display:block;text-align:right;margin-top:5px;font-size:13px;font-weight:600}
@@ -92,9 +97,12 @@
       <header><strong>ดาวน์โหลด</strong><button id="close" aria-label="ปิด">×</button></header>
       <label for="format">รูปแบบไฟล์</label><select id="format"><option value="mp4">วิดีโอ MP4</option><option value="mp3">เสียง MP3 · 192 kbps</option></select>
       <label for="quality">ความละเอียดสูงสุด</label><select id="quality"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="2160">4K</option></select>
+      <label for="folder">โฟลเดอร์ที่บันทึก</label>
+      <div class="folder-row"><input id="folder" type="text" placeholder="ค่าเริ่มต้น: Downloads\YouTube Personal"><button id="pickFolder" type="button">เลือก…</button></div>
+      <label id="askRow"><input id="askFolder" type="checkbox"><span>ถามที่เก็บทุกครั้งก่อนดาวน์โหลด</span></label>
       <button id="start">ดาวน์โหลดลงเครื่อง</button><button id="cancel" hidden>ยกเลิกดาวน์โหลด</button>
       <div id="progressArea" hidden><progress id="downloadProgress" max="100" aria-label="ความคืบหน้าดาวน์โหลด"></progress><span id="percent"></span></div>
-      <div id="status" role="status" aria-live="polite"></div><small>บันทึกใน Downloads / YouTube Personal<br>ใช้กับเนื้อหาที่คุณมีสิทธิ์ดาวน์โหลด</small>
+      <div id="status" role="status" aria-live="polite"></div><small id="folderHint">บันทึกใน Downloads / YouTube Personal<br>ใช้กับเนื้อหาที่คุณมีสิทธิ์ดาวน์โหลด</small>
     </section>`;
     get('toggle').onclick = () => {
       if (!chrome.runtime?.id) {location.reload();return;}
@@ -111,16 +119,42 @@
     };
     get('close').onclick = () => {close();get('toggle').focus();};
     get('format').onchange = () => {get('quality').disabled = get('format').value === 'mp3';};
+    const updateHint = () => {
+      const custom = get('folder').value.trim();
+      get('folderHint').innerHTML = 'บันทึกใน ' + (custom ? custom.replace(/[<>&]/g,'') : 'Downloads / YouTube Personal') + '<br>ใช้กับเนื้อหาที่คุณมีสิทธิ์ดาวน์โหลด';
+    };
+    get('folder').onchange = () => {
+      const val = get('folder').value.trim();
+      chrome.storage.local.set({downloadDir:val});
+      updateHint();
+    };
+    get('askFolder').onchange = () => {
+      chrome.storage.local.set({askFolder:get('askFolder').checked});
+    };
+    get('pickFolder').onclick = async () => {
+      get('pickFolder').disabled = true;
+      try {
+        const r = await chrome.runtime.sendMessage({action:'pick_folder',folder:get('folder').value.trim()});
+        if (r?.folder) {get('folder').value = r.folder;updateHint();}
+      } catch {} finally {get('pickFolder').disabled = !!job.busy;}
+    };
+    chrome.storage.local.get(['downloadDir','askFolder']).then(s => {
+      if (typeof s.downloadDir === 'string') get('folder').value = s.downloadDir;
+      if (typeof s.askFolder === 'boolean') get('askFolder').checked = s.askFolder;
+      updateHint();
+    }).catch(()=>{});
     get('start').onclick = async () => {
       const url = youtubeVideoURL(location.href);
       if (!url) {close();return;}
+      const folder = get('folder').value.trim();
+      const askFolder = get('askFolder').checked;
       starting=true;
       revision++;
-      job={busy:true,stage:'connecting',message:'กำลังส่งคำสั่งและเชื่อมต่อโปรแกรมช่วย…'};
+      job={busy:true,stage:'connecting',message:askFolder ? 'กำลังเปิดหน้าต่างเลือกโฟลเดอร์…' : 'กำลังส่งคำสั่งและเชื่อมต่อโปรแกรมช่วย…'};
       render();position();
       try {
         const response = await Promise.race([
-          chrome.runtime.sendMessage({action:'start',url,format:get('format').value,quality:Number(get('quality').value)}),
+          chrome.runtime.sendMessage({action:'start',url,format:get('format').value,quality:Number(get('quality').value),folder,askFolder}),
           new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
         ]);
         starting=false;
@@ -178,7 +212,11 @@
   function schedule() {if (!scheduled) {scheduled=true;setTimeout(mount,150);}}
   const initialRevision=revision;
   chrome.storage.local.get('job').then(({job:s})=>{if(revision===initialRevision) receiveJob(s||{});}).catch(()=>{});
-  chrome.storage.onChanged.addListener(c=>{if(c.job) receiveJob(c.job.newValue||{});});
+  chrome.storage.onChanged.addListener(c=>{
+    if(c.job) receiveJob(c.job.newValue||{});
+    if(ui && c.downloadDir) {get('folder').value = c.downloadDir.newValue || '';get('folder').dispatchEvent(new Event('input'));}
+    if(ui && c.askFolder) get('askFolder').checked = !!c.askFolder.newValue;
+  });
   setInterval(refreshJob,1000);
   document.addEventListener('pointerdown',event=>{if(host&&!event.composedPath().includes(host))close();},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&ui&&!get('menu').hidden){close();get('toggle').focus();}});

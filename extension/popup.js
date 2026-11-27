@@ -32,9 +32,22 @@ chrome.tabs.query({active:true,currentWindow:true}).then(([tab]) => {
   render(lastJob);
 });
 $('format').onchange = () => {$('quality').disabled = $('format').value === 'mp3';};
+chrome.storage.local.get(['downloadDir','askFolder']).then(s => {
+  if (typeof s.downloadDir === 'string') $('folder').value = s.downloadDir;
+  if (typeof s.askFolder === 'boolean') $('askFolder').checked = s.askFolder;
+});
+$('folder').onchange = () => chrome.storage.local.set({downloadDir:$('folder').value.trim()});
+$('askFolder').onchange = () => chrome.storage.local.set({askFolder:!!$('askFolder').checked});
+$('pickFolder').onclick = async () => {
+  $('pickFolder').disabled = true;
+  try {
+    const r = await chrome.runtime.sendMessage({action:'pick_folder',folder:$('folder').value.trim()});
+    if (r?.folder) $('folder').value = r.folder;
+  } catch {} finally {$('pickFolder').disabled = false;}
+};
 $('start').onclick = async () => {
   try {
-    const result = await chrome.runtime.sendMessage({action:'start',url:$('url').value,format:$('format').value,quality:Number($('quality').value)});
+    const result = await chrome.runtime.sendMessage({action:'start',url:$('url').value,format:$('format').value,quality:Number($('quality').value),folder:$('folder').value.trim(),askFolder:!!$('askFolder').checked});
     if(result?.error) $('status').textContent = result.error;
   } catch(e) {$('status').textContent = e.message;}
 };

@@ -72,6 +72,25 @@ async function handleMessage(msg, sender) {
   const reply = value => {response = value;};
   if(sender.id !== chrome.runtime.id) return;
   if(msg.action === 'get_job') return {job:latestJob || (await chrome.storage.local.get('job')).job || {busy:false,message:'พร้อมใช้งาน'}};
+  if(msg.action === 'pick_folder') {
+    const stored = await chrome.storage.local.get('downloadDir');
+    return new Promise(resolve => {
+      let done = false, conn;
+      const finish = async res => {
+        if (done) return;
+        done = true;
+        conn?.disconnect();
+        if (res.folder) await chrome.storage.local.set({downloadDir:res.folder});
+        resolve(res);
+      };
+      try {
+        conn = chrome.runtime.connectNative('com.personal.youtube_downloader');
+        conn.onMessage.addListener(d => {if (d.type === 'folder_result') finish({ok:true,folder:d.folder || ''});});
+        conn.onDisconnect.addListener(() => finish({error:chrome.runtime.lastError?.message || 'ปิดหน้าต่างเลือกโฟลเดอร์'}));
+        conn.postMessage({action:'pick_folder',folder:msg.folder ?? stored.downloadDir ?? ''});
+      } catch (e) {finish({error:e.message});}
+    });
+  }
   if(msg.action === 'check_update') {
     if (sender.tab || !sender.url?.startsWith(chrome.runtime.getURL(''))) return {error:'เปิดจากหน้าส่วนขยายเท่านั้น'};
     return checkForUpdate();
@@ -90,10 +109,17 @@ async function handleMessage(msg, sender) {
   if(running || checkingUpdate) return {error:'มีงานดาวน์โหลดหรือตรวจอัปเดตอยู่ กรุณารอสักครู่'};
   running = true;
   try {
+    const prefs = await chrome.storage.local.get(['downloadDir','askFolder']);
+    const folder = (msg.folder ?? prefs.downloadDir ?? '').trim();
+    const askFolder = Boolean(msg.askFolder ?? prefs.askFolder);
+    if (msg.folder !== undefined) chrome.storage.local.set({downloadDir:folder});
+    if (msg.askFolder !== undefined) chrome.storage.local.set({askFolder});
+    msg = {...msg,folder,askFolder};
     state({busy:true,stage:'connecting',message:'กำลังเชื่อมต่อโปรแกรมช่วย…'});
     const connection = chrome.runtime.connectNative('com.personal.youtube_downloader');
     port = connection;
     connection.onMessage.addListener(data => {
+      if(data.type === 'folder_selected' && data.folder) chrome.storage.local.set({downloadDir:data.folder});
       if(data.type === 'progress') state({busy:true,message:data.message,percent:data.percent,stage:data.stage || 'downloading'});
       if(['done','error','cancelled'].includes(data.type)) {
         running = false;

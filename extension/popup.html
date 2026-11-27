@@ -5,6 +5,9 @@
 <label for="url">ลิงก์วิดีโอ YouTube</label><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=…">
 <label for="format">รูปแบบ</label><select id="format"><option value="mp4">วิดีโอ MP4</option><option value="mp3">เสียง MP3 · 192 kbps</option></select>
 <label for="quality">ความละเอียดสูงสุด (MP4)</label><select id="quality"><option value="720">720p</option><option value="1080" selected>1080p</option><option value="2160">4K</option></select>
+<label for="folder">โฟลเดอร์ที่บันทึก</label>
+<div class="folder-row"><input id="folder" type="text" placeholder="ค่าเริ่มต้น: Downloads\YouTube Personal"><button id="pickFolder" type="button" class="secondary">เลือก…</button></div>
+<label class="ask-row"><input id="askFolder" type="checkbox"><span>ถามที่เก็บทุกครั้งก่อนดาวน์โหลด</span></label>
 <button id="start">ดาวน์โหลด</button><button id="cancel" class="secondary" disabled>ยกเลิก</button>
 <p id="status" role="status" aria-live="polite">พร้อมใช้งาน</p><progress id="progress" max="100" value="0"></progress>
 <small>ใช้กับเนื้อหาที่คุณเป็นเจ้าของหรือได้รับอนุญาตให้ดาวน์โหลด<br>ไฟล์อยู่ใน Downloads / YouTube Personal<br>ปิดหน้าต่างนี้ได้ระหว่างดาวน์โหลด แต่ต้องเปิด Chrome ไว้</small>
