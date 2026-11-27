@@ -83,7 +83,7 @@
       #progressArea{margin-top:14px}#downloadProgress{display:block;width:100%;height:10px;accent-color:#4f83ff}#percent{display:block;text-align:right;margin-top:5px;font-size:13px;font-weight:600}
       #status[data-stage=error]{color:#fda4af}#status[data-stage=done]{color:#86efac}
     </style>
-    <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-haspopup="dialog" aria-expanded="false">
+    <button id="toggle" title="ดาวน์โหลด MP4 / MP3" aria-label="ดาวน์โหลดวิดีโอหรือเสียง" aria-expanded="false">
       <svg viewBox="0 0 128 128" aria-hidden="true"><rect x="4" y="16" width="120" height="86" rx="24" fill="#ff0033"/><path d="M48 35V81L84 58Z" fill="white"/><circle cx="99" cy="98" r="29" fill="#111827"/><path d="M99 80V106M88 96L99 107L110 96M86 117H112" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <svg id="ring" viewBox="0 0 40 40" aria-hidden="true" hidden><circle cx="20" cy="20" r="18.75" fill="none" stroke="#73a6ff38" stroke-width="2.5"/><circle id="arc" cx="20" cy="20" r="18.75" fill="none" stroke="#73a6ff" stroke-width="2.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="72"/></svg>
     </button>

@@ -5,7 +5,7 @@ async function setDownloaderIcon() {
   const imageData = {};
   for (const size of [16,32,48,128]) {
     const canvas = new OffscreenCanvas(size,size);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d',{willReadFrequently:true});
     ctx.scale(size/128,size/128);
     ctx.fillStyle = '#ff0033';
     ctx.beginPath();ctx.roundRect(4,16,120,86,24);ctx.fill();
@@ -20,7 +20,6 @@ async function setDownloaderIcon() {
   await chrome.action.setIcon({imageData});
   await chrome.action.setTitle({title:'YouTube Downloader · MP4 / MP3'});
 }
-setDownloaderIcon().catch(()=>{});
 let port = null;
 let running = false;
 let checkingUpdate = false;
@@ -118,3 +117,4 @@ chrome.runtime.onMessage.addListener((msg,sender,reply) => {
   handleMessage(msg,sender).then(reply).catch(e=>reply({error:e.message}));
   return true;
 });
+setTimeout(()=>setDownloaderIcon().catch(()=>{}),0);
