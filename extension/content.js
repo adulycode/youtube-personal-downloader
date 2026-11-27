@@ -112,11 +112,14 @@
       job={busy:true,stage:'connecting',message:'กำลังส่งคำสั่งและเชื่อมต่อโปรแกรมช่วย…'};
       render();position();
       try {
-        const response = await chrome.runtime.sendMessage({action:'start',url,format:get('format').value,quality:Number(get('quality').value)});
+        const response = await Promise.race([
+          chrome.runtime.sendMessage({action:'start',url,format:get('format').value,quality:Number(get('quality').value)}),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
+        ]);
         starting=false;
-        if (response?.error) receiveJob({busy:false,stage:'error',message:response.error});
-        else {if(response?.job) receiveJob(response.job);await refreshJob();}
-      } catch {starting=false;receiveJob({busy:false,stage:'error',message:'เชื่อมส่วนขยายไม่ได้ กรุณารีเฟรชหน้า YouTube แล้วลองอีกครั้ง'});}
+        if (!response?.ok) receiveJob({busy:false,stage:'error',message:response?.error || 'เชื่อมส่วนขยายไม่ได้ กรุณารีเฟรชหน้า YouTube แล้วลองอีกครั้ง'});
+        else {if(response.job) receiveJob(response.job);await refreshJob();}
+      } catch {starting=false;receiveJob({busy:false,stage:'error',message:'เชื่อมส่วนขยายไม่ได้ กรุณารีเฟรชหน้า YouTube (F5) แล้วลองอีกครั้ง'});}
     };
     get('cancel').onclick = async () => {
       job={...job,stage:'cancelling',message:'กำลังยกเลิกดาวน์โหลด…'};render();

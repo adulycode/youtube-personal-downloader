@@ -78,8 +78,8 @@ async function handleMessage(msg, sender) {
     return checkForUpdate();
   }
   if (['start','cancel'].includes(msg.action)) {
-    const tab = sender.tab ? await chrome.tabs.get(sender.tab.id) : (await chrome.tabs.query({active:true,currentWindow:true}))[0];
-    const current = youtubeVideoURL(tab?.url);
+    const rawUrl = sender.tab ? (sender.url || sender.tab.url) : (await chrome.tabs.query({active:true,currentWindow:true}))[0]?.url;
+    const current = youtubeVideoURL(rawUrl);
     if (!current) return {error:'เปิดหน้าวิดีโอ YouTube ก่อนใช้งาน'};
     if (msg.action === 'start') {
       if (youtubeVideoURL(msg.url) !== current) return {error:'หน้าวิดีโอเปลี่ยนแล้ว กรุณาลองอีกครั้ง'};
@@ -91,7 +91,7 @@ async function handleMessage(msg, sender) {
   if(running || checkingUpdate) return {error:'มีงานดาวน์โหลดหรือตรวจอัปเดตอยู่ กรุณารอสักครู่'};
   running = true;
   try {
-    await state({busy:true,stage:'connecting',message:'กำลังเชื่อมต่อโปรแกรมช่วย…'});
+    state({busy:true,stage:'connecting',message:'กำลังเชื่อมต่อโปรแกรมช่วย…'});
     const connection = chrome.runtime.connectNative('com.personal.youtube_downloader');
     port = connection;
     connection.onMessage.addListener(data => {
