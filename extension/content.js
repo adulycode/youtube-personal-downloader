@@ -13,9 +13,12 @@
     polling=true;
     try {const r=await chrome.runtime.sendMessage({action:'get_job'});receiveJob(r?.job);} catch {} finally {polling=false;}
   }
+  function isOpen() {
+    return !!ui && !get('menu').hidden && (!get('menu').showPopover || get('menu').matches(':popover-open'));
+  }
   function close() {
     if (!ui) return;
-    if (get('menu').matches(':popover-open')) get('menu').hidePopover();
+    try { if (get('menu').matches(':popover-open')) get('menu').hidePopover(); } catch {}
     get('menu').hidden = true;
     get('toggle').setAttribute('aria-expanded', 'false');
   }
@@ -46,13 +49,14 @@
     get('percent').textContent = percent === null ? (job.stage === 'processing' ? 'กำลังรวม/แปลงไฟล์' : 'กำลังเตรียม…') : percent.toFixed(1)+'%';
     get('toggle').classList.toggle('busy', !!job.busy);
     get('toggle').classList.toggle('spin', !!job.busy && percent === null);
-    get('ring').hidden = !job.busy;
+    get('ring').toggleAttribute('hidden', !job.busy);
     get('arc').style.strokeDashoffset = percent === null ? 72 : 100 - percent;
     get('toggle').title = job.busy ? job.message : 'ดาวน์โหลด MP4 / MP3';
     get('caption').textContent = job.busy ? (percent === null ? 'กำลังทำงาน' : Math.round(percent)+'%') : 'Download';
     position();
   }
   function create() {
+    document.querySelectorAll('#personal-youtube-downloader').forEach(e=>e.remove());
     host = document.createElement('div');
     host.id = 'personal-youtube-downloader';
     ui = host.attachShadow({mode:'open'});
@@ -93,12 +97,15 @@
       <div id="status" role="status" aria-live="polite"></div><small>บันทึกใน Downloads / YouTube Personal<br>ใช้กับเนื้อหาที่คุณมีสิทธิ์ดาวน์โหลด</small>
     </section>`;
     get('toggle').onclick = () => {
-      if (!get('menu').hidden) {close();return;}
+      if (!chrome.runtime?.id) {location.reload();return;}
+      if (isOpen()) {close();return;}
       get('menu').hidden = false;
-      if (get('menu').showPopover) {
-        get('menu').setAttribute('popover','manual');
-        get('menu').showPopover();
-      }
+      try {
+        if (get('menu').showPopover) {
+          get('menu').setAttribute('popover','manual');
+          if (!get('menu').matches(':popover-open')) get('menu').showPopover();
+        }
+      } catch {}
       get('toggle').setAttribute('aria-expanded','true');
       position();get('format').focus();refreshJob();
     };
